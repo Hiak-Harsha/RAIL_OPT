@@ -27,9 +27,20 @@ import { FocusManager } from "./interaction/FocusManager";
 import { WelcomeChoiceModal } from "./components/Landing/WelcomeChoiceModal";
 
 export const App: React.FC = () => {
-  const [isFirstRunModalOpen, setIsFirstRunModalOpen] = useState(false);
-  const [appPhase, setAppPhase] = useState<"cinematic" | "coldOpen" | "occ">("cinematic");
+  const [appPhase, setAppPhase] = useState<"choice" | "cinematic" | "coldOpen" | "occ">("choice");
   const [activeTab, setActiveTab] = useState<"theater" | "control" | "review" | "what-if" | "analytics" | "audit">("control");
+
+  useEffect(() => {
+    try {
+      const completed = localStorage.getItem("railopt_first_run_completed");
+      const preferred = localStorage.getItem("railopt_preferred_landing");
+      if (completed === "true" && (preferred === "cinematic" || preferred === "occ")) {
+        setAppPhase(preferred);
+      }
+    } catch {
+      // Safe catch for environments with restricted localStorage
+    }
+  }, []);
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [trains, setTrains] = useState<Train[]>([]);
   const [blocks, setBlocks] = useState<TrackBlock[]>([]);
@@ -566,7 +577,13 @@ export const App: React.FC = () => {
 
   return (
     <InteractionProvider>
-      {appPhase === "cinematic" ? (
+      {appPhase === "choice" ? (
+        <WelcomeChoiceModal
+          isOpen={true}
+          onSelectCinematic={() => setAppPhase("cinematic")}
+          onSelectOCC={() => setAppPhase("occ")}
+        />
+      ) : appPhase === "cinematic" ? (
         <LandingCinematic onComplete={() => setAppPhase("coldOpen")} />
       ) : appPhase === "coldOpen" ? (
         <ColdOpen onComplete={() => setAppPhase("occ")} />
@@ -701,19 +718,6 @@ export const App: React.FC = () => {
             onNavigateToReview={() => setActiveTab("review")}
             onLocateTrain={handleLocateTrain}
             initialQuery={assistantInitialQuery}
-          />
-
-          {/* First-Run Welcome Choice Modal */}
-          <WelcomeChoiceModal
-            isOpen={isFirstRunModalOpen}
-            onSelectCinematic={() => {
-              setIsFirstRunModalOpen(false);
-              setAppPhase("cinematic");
-            }}
-            onSelectOCC={() => {
-              setIsFirstRunModalOpen(false);
-              setAppPhase("occ");
-            }}
           />
         </div>
       )}

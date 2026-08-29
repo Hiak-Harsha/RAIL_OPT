@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "name": "RAILOPT-X 3D Rolling Stock Pipeline",
+  "renderer": "Three.js / WebGL with 2D SVG Material Fallback",
+  "models": [
+    {
+      "id": "MODEL_VANDE_BHARAT",
+      "name": "Vande Bharat Express (Train 18)",
+      "class": "EXPRESS_HIGH_SPEED",
+      "locomotive_type": "EMU_AERODYNAMIC_CAB",
+      "rake_length_m": 400.0,
+      "polycount": 2840,
+      "materials": ["Aluminium_White", "Metallic_Blue_Stripe", "Tinted_Glass"],
+      "lod_levels": {
+        "macro": "Network_Pip_LOD0",
+        "meso": "Directional_Slug_LOD1",
+        "micro": "WebGL_Mesh_LOD2"
+      },
+      "license": "CC0-1.0 / MIT Procedural Three.js Model"
+    },
+    {
+      "id": "MODEL_WAP7_EXPRESS",
+      "name": "WAP-7 Electric Locomotive + LHB Passenger Rake",
+      "class": "EXPRESS_PASSENGER",
+      "locomotive_type": "WAP7_DUAL_CAB_ELECTRIC",
+      "rake_length_m": 550.0,
+      "polycount": 3420,
+      "materials": ["IR_Crimson_Red", "LHB_Blue", "Steel_Journal_Boxes"],
+      "lod_levels": {
+        "macro": "Network_Pip_LOD0",
+        "meso": "Directional_Slug_LOD1",
+        "micro": "WebGL_Mesh_LOD2"
+      },
+      "license": "CC0-1.0 / MIT Procedural Three.js Model"
+    },
+    {
+      "id": "MODEL_WAG9_FREIGHT",
+      "name": "WAG-9 Heavy Electric Locomotive + Container Rake",
+      "class": "HEAVY_FREIGHT",
+      "locomotive_type": "WAG9_CO_CO_ELECTRIC",
+      "rake_length_m": 680.0,
+      "polycount": 4150,
+      "materials": ["Forest_Green", "Container_Orange", "Cast_Iron_Couplers"],
+      "lod_levels": {
+        "macro": "Network_Pip_LOD0",
+        "meso": "Directional_Slug_LOD1",
+        "micro": "WebGL_Mesh_LOD2"
+      },
+      "license": "CC0-1.0 / MIT Procedural Three.js Model"
+    },
+    {
+      "id": "MODEL_MEMU_COMMUTER",
+      "name": "Suburban Mainline EMU (MEMU)",
+      "class": "SUBURBAN_COMMUTER",
+      "locomotive_type": "MEMU_CAB_MOTOR_CAR",
+      "rake_length_m": 250.0,
+      "polycount": 2100,
+      "materials": ["Commuter_Purple", "Aluminium_Sliding_Doors"],
+      "lod_levels": {
+        "macro": "Network_Pip_LOD0",
+        "meso": "Directional_Slug_LOD1",
+        "micro": "WebGL_Mesh_LOD2"
+      },
+      "license": "CC0-1.0 / MIT Procedural Three.js Model"
+    }
+  ]
+}

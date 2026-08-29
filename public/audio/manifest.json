@@ -1,0 +1,90 @@
+{
+  "version": "2.0.0",
+  "name": "RAILOPT-X Authentic Railway Audio Engine",
+  "license": "CC0-1.0 / MIT Procedural Web Audio API",
+  "default_muted": true,
+  "spatial_audio_enabled": true,
+  "attenuation_model": "inverse",
+  "max_distance_km": 15.0,
+  "reference_distance_km": 1.0,
+  "sample_rate_hz": 48000,
+  "channels": {
+    "master": { "default_gain": 0.8, "muted_by_default": true },
+    "ambient": { "default_gain": 0.35, "muted_by_default": false },
+    "trains": { "default_gain": 0.7, "muted_by_default": false },
+    "interlocking": { "default_gain": 0.6, "muted_by_default": false },
+    "teleprinter": { "default_gain": 0.4, "muted_by_default": false },
+    "alerts": { "default_gain": 0.85, "muted_by_default": false }
+  },
+  "sound_cues": [
+    {
+      "id": "TRACTION_MOTOR_WAP7",
+      "category": "trains",
+      "type": "PROCEDURAL_SYNTH",
+      "description": "Three-phase VVVF traction inverter harmonics and electric motor hum",
+      "base_frequency_hz": 120.0,
+      "harmonic_multipliers": [1.0, 1.5, 2.0, 3.0],
+      "pitch_tracking": "train_speed_kmh",
+      "license": "MIT"
+    },
+    {
+      "id": "TRACK_JOINT_CLICK",
+      "category": "trains",
+      "type": "PROCEDURAL_SYNTH",
+      "description": "Dual rhythmic wheel impact click-clack over insulated rail joints",
+      "base_frequency_hz": 800.0,
+      "decay_sec": 0.04,
+      "cadence_tracking": "train_speed_kmh",
+      "license": "MIT"
+    },
+    {
+      "id": "AIR_BRAKE_EXHAUST",
+      "category": "trains",
+      "type": "PROCEDURAL_WHITE_NOISE",
+      "description": "Pneumatic distributor exhaust hiss on brake application/release",
+      "filter_frequency_hz": 3200.0,
+      "duration_sec": 0.6,
+      "license": "MIT"
+    },
+    {
+      "id": "SWITCH_POINTS_THROW",
+      "category": "interlocking",
+      "type": "PROCEDURAL_SYNTH",
+      "description": "Electromechanical point machine motor hum and heavy locking latch clunk",
+      "duration_sec": 1.2,
+      "license": "MIT"
+    },
+    {
+      "id": "SIGNAL_RELAY_CLICK",
+      "category": "interlocking",
+      "type": "PROCEDURAL_PULSE",
+      "description": "Fail-safe Q-style interlocking relay mechanical armature actuation click",
+      "duration_sec": 0.03,
+      "license": "MIT"
+    },
+    {
+      "id": "OCC_ROOM_AMBIENCE",
+      "category": "ambient",
+      "type": "PROCEDURAL_PINK_NOISE",
+      "description": "Operations control center filtered HVAC air conditioning and equipment hum",
+      "filter_frequency_hz": 180.0,
+      "license": "MIT"
+    },
+    {
+      "id": "SAFETY_INVARIANT_ALERT",
+      "category": "alerts",
+      "type": "PROCEDURAL_DUAL_TONE",
+      "description": "Attentive low-urgency chime for conflict radar detection (440Hz / 880Hz)",
+      "duration_sec": 0.45,
+      "license": "MIT"
+    },
+    {
+      "id": "TELEPRINTER_STRIKE",
+      "category": "teleprinter",
+      "type": "PROCEDURAL_SYNTH",
+      "description": "Mechanical audit typewriter wheel strike and paper advance",
+      "duration_sec": 0.02,
+      "license": "MIT"
+    }
+  ]
+}

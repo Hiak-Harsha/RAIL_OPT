@@ -1,0 +1,100 @@
+/**
+ * RAILOPT-X 2.0 Semantic Motion & Keyframe System.
+ * 
+ * Provides deliberate, physically grounded railway animations:
+ *  - Slow, controlled conflict pulse (no frantic bounces)
+ *  - Progressive route illumination wake
+ *  - Focus spotlight dimming (100% active, 25% background)
+ *  - Precision relay transition flashes
+ */
+
+@keyframes railFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes conflictPulseSlow {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.7));
+  }
+  50% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.3));
+  }
+}
+
+@keyframes routeWake {
+  0% {
+    stroke-dashoffset: 60;
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.85;
+  }
+}
+
+@keyframes decisionRipple {
+  0% {
+    r: 8;
+    opacity: 0.9;
+    stroke-width: 2;
+  }
+  100% {
+    r: 54;
+    opacity: 0;
+    stroke-width: 0.5;
+  }
+}
+
+@keyframes relayLatchFlash {
+  0% {
+    filter: brightness(1.8);
+  }
+  100% {
+    filter: brightness(1.0);
+  }
+}
+
+/* Semantic Animation Utility Classes */
+.rail-fade-in {
+  animation: railFadeIn 0.35s ease-out forwards;
+}
+
+.conflict-pulse-slow {
+  animation: conflictPulseSlow 1.8s ease-in-out infinite;
+}
+
+.route-wake-active {
+  stroke-dasharray: 8 4;
+  animation: routeWake 1.2s linear infinite;
+}
+
+.decision-ripple-wave {
+  animation: decisionRipple 1.4s ease-out infinite;
+}
+
+.relay-flash {
+  animation: relayLatchFlash 0.25s ease-out forwards;
+}
+
+/* Spotlight Focus Classes */
+.spotlight-active {
+  opacity: 1.0 !important;
+  transition: opacity 0.4s ease-out, filter 0.4s ease-out;
+}
+
+.spotlight-dimmed {
+  opacity: 0.25 !important;
+  transition: opacity 0.4s ease-out;
+}

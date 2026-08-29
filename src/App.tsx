@@ -26,21 +26,22 @@ import { TrafficTheaterScreen } from "./screens/TrafficTheater/TrafficTheaterScr
 import { FocusManager } from "./interaction/FocusManager";
 import { WelcomeChoiceModal } from "./components/Landing/WelcomeChoiceModal";
 
-export const App: React.FC = () => {
-  const [appPhase, setAppPhase] = useState<"choice" | "cinematic" | "coldOpen" | "occ">("choice");
-  const [activeTab, setActiveTab] = useState<"theater" | "control" | "review" | "what-if" | "analytics" | "audit">("control");
-
-  useEffect(() => {
-    try {
-      const completed = localStorage.getItem("railopt_first_run_completed");
-      const preferred = localStorage.getItem("railopt_preferred_landing");
-      if (completed === "true" && (preferred === "cinematic" || preferred === "occ")) {
-        setAppPhase(preferred);
-      }
-    } catch {
-      // Safe catch for environments with restricted localStorage
+function resolveInitialAppPhase(): "choice" | "cinematic" | "coldOpen" | "occ" {
+  try {
+    const completed = localStorage.getItem("railopt_first_run_completed");
+    const preferred = localStorage.getItem("railopt_preferred_landing");
+    if (completed === "true" && (preferred === "cinematic" || preferred === "occ")) {
+      return preferred;
     }
-  }, []);
+  } catch {
+    // localStorage unavailable (e.g. privacy mode) — fall through to default
+  }
+  return "choice";
+}
+
+export const App: React.FC = () => {
+  const [appPhase, setAppPhase] = useState<"choice" | "cinematic" | "coldOpen" | "occ">(resolveInitialAppPhase);
+  const [activeTab, setActiveTab] = useState<"theater" | "control" | "review" | "what-if" | "analytics" | "audit">("control");
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [trains, setTrains] = useState<Train[]>([]);
   const [blocks, setBlocks] = useState<TrackBlock[]>([]);

@@ -1,13 +1,15 @@
 /**
  * RAILOPT-X 2.0 — Dynamic Voice-Over & Spoken Alert Engine (Web Speech API)
  * 
- * Provides professional, real-time synthesized voice narration for OCC:
- * - Dynamic conflict predictions
- * - Decision approvals, overrides, and rejection reasons
- * - Cinematic narrative beats & problem story
+ * STRICT VOICE GATING POLICY:
+ * Voice speech synthesis is strictly restricted to exactly two triggers:
+ * 1. Once, when the simulation/cinematic starts (announceSimulationStart)
+ * 2. When a real or scripted conflict occurs (announceConflict / speakAlert)
+ * 
+ * Features:
  * - Phonetic train ID conversion (e.g. "22436" -> "train two two four three six")
- * - Automatic background train audio ducking
- * - Real-time captions / subtitle broadcasting
+ * - Background train audio ducking during speech
+ * - Real-time captions / subtitle broadcasting for all phases
  * - Chromium garbage-collection protection & auto-resume watchdog
  */
 
@@ -110,24 +112,59 @@ class VoiceOverEngineService {
     });
   }
 
-  public speakAlert(text: string) {
-    this.speak(text, "ALERT", true);
-  }
-
-  public speakDecision(text: string) {
-    this.speak(text, "DECISION", false);
-  }
-
-  public speakNarration(text: string) {
+  /**
+   * TRIGGER 1: Spoken introduction when simulation or cinematic starts.
+   * Fires exactly once per session/run.
+   */
+  public announceSimulationStart(text: string) {
     this.speak(text, "NARRATION", false);
   }
 
   /**
-   * Test voice synthesis with a live radio callsign
+   * TRIGGER 2: Spoken conflict alert on predicted crossing or headway hazard.
+   */
+  public announceConflict(text: string) {
+    this.speak(text, "ALERT", true);
+  }
+
+  /**
+   * Alias for backwards compatibility with useSimulationAudio.ts
+   */
+  public speakAlert(text: string) {
+    this.announceConflict(text);
+  }
+
+  /**
+   * Gated: Decisions display captions/logs but produce NO synthesized speech.
+   */
+  public speakDecision(text: string) {
+    // Caption-only broadcast per voice-gating requirements
+    this.notifyCaption({
+      text: this.phonetize(text),
+      type: "DECISION",
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Gated: General narrations display captions but produce NO synthesized speech
+   * unless explicitly triggered through announceSimulationStart.
+   */
+  public speakNarration(text: string) {
+    // Caption-only broadcast per voice-gating requirements
+    this.notifyCaption({
+      text: this.phonetize(text),
+      type: "NARRATION",
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Manual user-initiated radio test button (OCCHeader.tsx)
    */
   public testVoice() {
     this.setMuted(false);
-    this.speakAlert("Radio check. All corridor sectors reporting green. Section control AI online.");
+    this.speak("Radio check. All corridor sectors reporting green. Section control AI online.", "ALERT", true);
   }
 
   private speak(text: string, type: "ALERT" | "DECISION" | "NARRATION", isUrgent: boolean) {

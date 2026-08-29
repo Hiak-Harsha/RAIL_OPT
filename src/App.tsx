@@ -25,7 +25,6 @@ import { ColdOpen } from "./screens/ColdOpen/ColdOpen";
 import { TrafficTheaterScreen } from "./screens/TrafficTheater/TrafficTheaterScreen";
 import { FocusManager } from "./interaction/FocusManager";
 import { WelcomeChoiceModal } from "./components/Landing/WelcomeChoiceModal";
-import { VoiceOverEngine } from "./audio/VoiceOverEngine";
 
 export const App: React.FC = () => {
   const [isFirstRunModalOpen, setIsFirstRunModalOpen] = useState(false);
@@ -451,13 +450,11 @@ export const App: React.FC = () => {
           setTrains(data.trains || []);
           if (data.kpis) setKpis(data.kpis);
         }
-        VoiceOverEngine.speakDecision(`Decision ${action.toLowerCase()} executed. Mainline precedence locked.`);
       }
     } catch (e: any) {
       const errorMsg = e?.detail || e?.message || "Decision rejected by safety interlocking.";
       console.error("Decision action error:", e);
       setDecisionError(errorMsg);
-      VoiceOverEngine.speakAlert(`Action failed: ${errorMsg}`);
     }
   };
 

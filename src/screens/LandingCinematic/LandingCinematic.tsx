@@ -10,7 +10,9 @@
  * 6. Optimal AI Resolution (+3.2m hold on T04403, 0 conflicts, 41m delay saved)
  * 
  * Features:
- * - Dynamic Voice-Over speech synthesis with phonetic callsigns
+ * - Real Field-Recorded Train Audio Bed (train-ambience-real.mp3) with Web Audio gain automation
+ * - 152 BPM Beatmap Micro & Macro Movement Synchronization
+ * - Strict Voice-Over Gating (Start Announcement & Conflict Alert only)
  * - Split-Flap mechanical KPI flips
  * - Live Traffic Teleprinter stream
  * - Interactive Beat Jump Navigation
@@ -26,6 +28,7 @@ import { CinematicCaption } from "./CinematicCaption";
 import { FutureWorldsOverlay } from "./FutureWorldsOverlay";
 import { RailwayAudio } from "../../audio/RailwayAudioEngine";
 import { VoiceOverEngine, type VoiceCaption } from "../../audio/VoiceOverEngine";
+import { CinematicRealAudio, type BeatSyncState } from "../../audio/CinematicRealAudioEngine";
 import { Magnetic } from "../../components/interaction/Magnetic";
 import { 
   Volume2, VolumeX, Play, ShieldCheck, ArrowRight, Radio, RotateCcw, 
@@ -55,12 +58,23 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
   const [hasStartedWithVoice, setHasStartedWithVoice] = useState(false);
   const [voiceCaption, setVoiceCaption] = useState<VoiceCaption | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [beatSync, setBeatSync] = useState<BeatSyncState>({
+    microPulse: 0,
+    macroIntensity: 0.2,
+    speedMultiplier: 1.0,
+    bogieBobPx: 0
+  });
   
   const startTimeRef = useRef<number | null>(null);
   const pausedAtRef = useRef<number>(0);
   const totalPausedDurationRef = useRef<number>(0);
   const lastSoundCueRef = useRef<string | null>(null);
   const loggedLinesRef = useRef<Set<string>>(new Set());
+
+  // Preload real train audio & beatmap on mount
+  useEffect(() => {
+    void CinematicRealAudio.preload();
+  }, []);
 
   // Subscribe to VoiceOver captions
   useEffect(() => {
@@ -69,6 +83,7 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
 
   // Stop all sounds when exiting the cinematic screen into OCC
   const handleSkip = useCallback(() => {
+    CinematicRealAudio.stop();
     RailwayAudio.stopAll();
     VoiceOverEngine.stopAll();
     onComplete();
@@ -77,6 +92,7 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
   // Teardown sound engine on unmount
   useEffect(() => {
     return () => {
+      CinematicRealAudio.stop();
       RailwayAudio.stopAll();
       VoiceOverEngine.stopAll();
     };
@@ -85,7 +101,8 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
   // Initialize Web Audio and Speech Synthesis on user gesture
   const startStoryWithVoice = useCallback(() => {
     void RailwayAudio.resume();
-    RailwayAudio.setMuted(false);
+    void CinematicRealAudio.start(0, "CALM");
+    CinematicRealAudio.setMuted(false);
     VoiceOverEngine.setMuted(false);
     setIsMuted(false);
     setHasStartedWithVoice(true);
@@ -94,13 +111,15 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
     pausedAtRef.current = 0;
     setIsPaused(false);
 
-    // Initial voice narration hook
-    VoiceOverEngine.speakNarration("Welcome to RAILOPT-X. High-density corridor digital twin online. Observe normal one-thirty kilometer per hour traffic flow.");
+    // TRIGGER 1: Spoken introduction (fires exactly once on start)
+    VoiceOverEngine.announceSimulationStart("Welcome to RAILOPT-X. High-density corridor digital twin online. Observe normal one-thirty kilometer per hour traffic flow.");
   }, []);
 
   // Jump to specific beat
   const jumpToBeat = (timeMs: number) => {
     void RailwayAudio.resume();
+    const beat = BEATS.find((b) => b.timeMs === timeMs);
+    void CinematicRealAudio.start(timeMs / 1000, beat?.id || "CALM");
     setHasStartedWithVoice(true);
     startTimeRef.current = performance.now() - timeMs;
     totalPausedDurationRef.current = 0;
@@ -132,6 +151,7 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
       if (!startTimeRef.current) startTimeRef.current = now;
 
       if (isPaused) {
+        CinematicRealAudio.stop();
         RailwayAudio.stopAll();
         if (!pausedAtRef.current) pausedAtRef.current = now;
         animId = requestAnimationFrame(tick);
@@ -141,33 +161,38 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
       if (pausedAtRef.current) {
         totalPausedDurationRef.current += (now - pausedAtRef.current);
         pausedAtRef.current = 0;
+        const currentElapsedSec = Math.max(0, (now - startTimeRef.current - totalPausedDurationRef.current) / 1000);
+        void CinematicRealAudio.start(currentElapsedSec, frame.phase);
       }
 
       const elapsed = Math.max(0, now - startTimeRef.current - totalPausedDurationRef.current);
       setElapsedMs(elapsed);
 
-      const currentFrame = resolveFrameAt(GRIDLOCK_KEYFRAMES, elapsed);
+      // Deterministic beatmap sync at 152 BPM
+      const currentBeatSync = CinematicRealAudio.getBeatSync(elapsed / 1000);
+      setBeatSync(currentBeatSync);
+
+      const baseFrame = resolveFrameAt(GRIDLOCK_KEYFRAMES, elapsed);
+
+      // Apply subtle cosmetic motion breathing to trains (without drifting keyframe positions)
+      const syncedTrains = baseFrame.trains.map((t) => ({
+        ...t,
+        current_speed_kmh: t.current_speed_kmh > 0 
+          ? Math.round(t.current_speed_kmh * currentBeatSync.speedMultiplier) 
+          : 0,
+      }));
+
+      const currentFrame = {
+        ...baseFrame,
+        trains: syncedTrains,
+      };
       setFrame(currentFrame);
 
-      // Continuous Physics-Driven Train Speed Audio Modulation
+      // Automated real audio bed gain transitions + discrete sound cues
       if (!isMuted && hasStartedWithVoice) {
-        currentFrame.trains.forEach((t) => {
-          RailwayAudio.updateTrainSpeed(
-            t.train_id,
-            t.current_speed_kmh,
-            t.train_id.includes("04403") ? "FREIGHT" : "EXPRESS",
-            t.current_speed_kmh > 0
-          );
-        });
+        CinematicRealAudio.setPhase(currentFrame.phase);
 
-        // Scene-driven Acoustic Transition
-        if (currentFrame.phase === "CALM") RailwayAudio.transitionScene("CALM");
-        else if (currentFrame.phase === "ESCALATING") RailwayAudio.transitionScene("TRAFFIC_BUILD");
-        else if (currentFrame.phase === "GRIDLOCK") RailwayAudio.transitionScene("CONFLICT");
-        else if (currentFrame.phase === "FUTURE_WORLDS") RailwayAudio.transitionScene("OPTIMIZING");
-        else if (currentFrame.phase === "RESOLVING" || currentFrame.phase === "OPTIMAL") RailwayAudio.transitionScene("RECOVERY");
-
-        // Discrete Sound Cue Dispatcher
+        // Discrete Sound Cue Dispatcher (relay click, teleprinter, chime)
         if (currentFrame.soundCue && currentFrame.soundCue !== lastSoundCueRef.current) {
           lastSoundCueRef.current = currentFrame.soundCue;
           if (currentFrame.soundCue === "relay") RailwayAudio.playSignalChange("YELLOW");
@@ -183,9 +208,11 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
           loggedLinesRef.current.add(currentFrame.teleprinterLine);
           RailwayAudio.playTeleprinter(currentFrame.teleprinterLine);
           
+          // TRIGGER 2: Only lines during GRIDLOCK / conflict trigger speech synthesis
           if (currentFrame.phase === "GRIDLOCK") {
-            VoiceOverEngine.speakAlert(currentFrame.teleprinterLine);
+            VoiceOverEngine.announceConflict(currentFrame.teleprinterLine);
           } else {
+            // Other phases broadcast silent captions / subtitle text only
             VoiceOverEngine.speakNarration(currentFrame.teleprinterLine);
           }
 
@@ -211,16 +238,19 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
 
     animId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animId);
-  }, [isPaused, isMuted, hasStartedWithVoice]);
+  }, [isPaused, isMuted, hasStartedWithVoice, frame.phase]);
 
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
     void RailwayAudio.resume();
     const next = !isMuted;
     setIsMuted(next);
-    RailwayAudio.setMuted(next);
+    CinematicRealAudio.setMuted(next);
     VoiceOverEngine.setMuted(next);
-    if (!next) setHasStartedWithVoice(true);
+    if (!next) {
+      setHasStartedWithVoice(true);
+      void CinematicRealAudio.start(elapsedMs / 1000, frame.phase);
+    }
   };
 
   const handleRestart = (e: React.MouseEvent) => {
@@ -229,7 +259,9 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
     totalPausedDurationRef.current = 0;
     pausedAtRef.current = 0;
     setIsPaused(false);
+    loggedLinesRef.current.clear();
     setFrame(GRIDLOCK_KEYFRAMES[0]);
+    void CinematicRealAudio.start(0, "CALM");
   };
 
   const progressPct = Math.min(100, (elapsedMs / TOTAL_DURATION_MS) * 100);
@@ -283,7 +315,7 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
             title={isMuted ? "Unmute Audio" : "Mute Audio"}
           >
             {isMuted ? <VolumeX className="w-3.5 h-3.5 text-[#EF4444]" /> : <Volume2 className="w-3.5 h-3.5 text-[#00E676]" />}
-            <span className="font-mono text-[10px] font-bold">{isMuted ? "MUTED" : "LIVE VOICE & AUDIO"}</span>
+            <span className="font-mono text-[10px] font-bold">{isMuted ? "MUTED" : "REAL TRAIN AUDIO (152 BPM)"}</span>
           </button>
 
           <button
@@ -342,10 +374,10 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
               </div>
               <div>
                 <h3 className="text-sm font-mono font-bold text-[#EAF2F7]">
-                  EXPERIENCE WITH DYNAMIC RADIO VOICE NARRATION
+                  EXPERIENCE WITH REAL TRAIN AMBIENCE & VOICE NARRATION
                 </h3>
                 <p className="text-xs text-[#81909B] font-sans">
-                  Listen to authentic synthesized railway radio dispatch commentary during corridor crisis and AI resolution.
+                  Listen to genuine interior train acoustics beat-synced at 152 BPM and automated dispatcher radio alerts.
                 </p>
               </div>
             </div>
@@ -354,7 +386,7 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
               className="px-5 py-2.5 rounded-xl bg-[#00D4FF] hover:bg-[#38BDF8] text-[#03070B] font-mono text-xs font-black uppercase tracking-wider shadow-xl transition-all hover:scale-105 shrink-0 flex items-center gap-2 cursor-pointer"
             >
               <Play className="w-4 h-4 fill-current" />
-              <span>PLAY WITH VOICE</span>
+              <span>PLAY WITH VOICE & AUDIO</span>
             </button>
           </div>
         )}
@@ -369,7 +401,12 @@ export const LandingCinematic: React.FC<LandingCinematicProps> = ({ onComplete }
         </div>
 
         {/* Live Digital Twin Track Canvas */}
-        <div className="relative w-full h-[400px] lg:h-[450px] rounded-2xl border border-[#162434] bg-[#071018]/95 backdrop-blur-xl shadow-2xl overflow-hidden shrink-0">
+        <div 
+          className="relative w-full h-[400px] lg:h-[450px] rounded-2xl border border-[#162434] bg-[#071018]/95 backdrop-blur-xl shadow-2xl overflow-hidden shrink-0 transition-transform duration-75"
+          style={{
+            transform: `translateY(${beatSync.bogieBobPx.toFixed(1)}px)`
+          }}
+        >
           {/* Beat 4: Unmanaged Emergency Braking Trip Callout */}
           {frame.phase === "GRIDLOCK" && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[#EF4444]/95 text-white border border-[#FF5252] px-5 py-2 rounded-xl font-mono text-xs font-black shadow-2xl flex items-center gap-2.5 animate-bounce">
